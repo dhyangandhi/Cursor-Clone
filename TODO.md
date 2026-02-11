@@ -1,0 +1,2 @@
+- [x] Edit convex/projects.ts to remove args from get query
+- [x] Update use-projects.ts to fix API calls

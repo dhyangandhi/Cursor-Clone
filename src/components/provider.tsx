@@ -10,8 +10,8 @@ import {
   Unauthenticated,
 } from "convex/react";
 import { ThemeProvider } from "./ui/theme-provider";
-import { UnauthenticatedView } from "@/featuers/auth/componentes/unatuhenticated-view";
-import { AuthLoadingView } from "@/featuers/auth/componentes/auth-loqding-view";
+import { UnauthenticatedView } from "@/features/auth/components/unatuhenticated-view";
+import { AuthLoadingView } from "@/features/auth/components/auth-loqding-view";
 
 const convex = new ConvexReactClient(
   process.env.NEXT_PUBLIC_CONVEX_URL!
