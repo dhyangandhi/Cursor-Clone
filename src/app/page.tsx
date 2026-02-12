@@ -1,4 +1,4 @@
-import ProjectsView from "@/features/auth/components/projects/components/Projects-View";
+import ProjectsView from "@/features/projects/components/Projects-View";
 
 const Home = () => {
   return <ProjectsView />
