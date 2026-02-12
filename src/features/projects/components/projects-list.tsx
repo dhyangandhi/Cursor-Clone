@@ -1,4 +1,4 @@
-import { useProjectsPartial } from "../hooks/use-projects";
+import { useProjectsPartial } from "../components/hooks/use-projects";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Doc } from "@convex/_generated/dataModel";
@@ -46,7 +46,7 @@ const ContinueCard = ({
                 asChild
                 className="h-auto items-start justify-start bg-background border runnded-none flex flex-col gap-2"
             >
-                <Link href={'/projects/${data_id}'} className="group">
+                <Link href={`/projects/${data._id}`} className="group">
                     <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-2 ">
                             {getProjectIcon(data)}

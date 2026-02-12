@@ -39,7 +39,7 @@
     "**/*.mts",
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "src/features/auth/components/unatuhenticated-view.tsx"  ],
   "exclude": [
     "node_modules"
   ]
