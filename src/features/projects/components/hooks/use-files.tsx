@@ -2,31 +2,35 @@ import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 
-/* =========================
-   Create File
-========================= */
-export const useCreateFile = () => {
-  return useMutation(api.files.createFile);
+export const useFile = (fileId: Id<"files"> | null) => {
+  return useQuery(
+    api.files.getFile,
+    fileId ? { id: fileId } : "skip"
+  );
 };
 
-export const useRenameFile = () => {
-  return useMutation(api.files.renameFile);
+export const useFilePath = (fileId: Id<"files"> | null) => {
+  return useQuery(
+    api.files.getFilePath,
+    fileId ? { id: fileId } : "skip"
+  );
 };
 
-export const useDeleteFile = () => {
-  return useMutation(api.files.deleteFile);
-};
+export const useCreateFile = () =>
+  useMutation(api.files.createFile);
 
-/* =========================
-   Create Folder
-========================= */
-export const useCreateFolder = () => {
-  return useMutation(api.files.createFolder);
-};
+export const useUpdateFile = () => {
+  return useMutation(api.files.updateFile);
+}
+export const useRenameFile = () =>
+  useMutation(api.files.renameFile);
 
-/* =========================
-   Get Folder Contents
-========================= */
+export const useDeleteFile = () =>
+  useMutation(api.files.deleteFile);
+
+export const useCreateFolder = () =>
+  useMutation(api.files.createFolder);
+
 export const useFolderContents = ({
   projectId,
   parentId,
@@ -39,10 +43,7 @@ export const useFolderContents = ({
   return useQuery(
     api.files.getFolderContents,
     enabled
-      ? {
-          projectId,
-          parentId,
-        }
+      ? { projectId, parentId }
       : "skip"
   );
 };

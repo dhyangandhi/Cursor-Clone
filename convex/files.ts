@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { verifyAuth } from "./auth";
-import { Id } from "./_generated/dataModel";
+import { Id, Doc } from "./_generated/dataModel";
 
 /* =======================
    Get All Files in Project
@@ -24,8 +24,7 @@ export const getFiles = query({
         q.eq("projectId", args.projectId)
       )
       .collect();
-
-    },
+  },
 });
 
 /* =======================
@@ -47,6 +46,37 @@ export const getFile = query({
       throw new Error("Unauthorized");
 
     return file;
+  },
+});
+
+/* =======================
+   Get File Path
+======================= */
+
+export const getfilePath = query({
+  args: { id: v.id("files") },
+
+  handler: async (ctx, args) => {
+    const identity = await verifyAuth(ctx);
+
+    const file = await ctx.db.get("files", args.id); 
+
+    if (!file) {
+      throw new Error("File not found");
+    }
+      const path: {_id: string; name: string } [] = [];
+      let currentId: Id<"files"> | undefined = args.id;
+
+      while (currentId) {
+        const file = (await ctx.db.get("files", currentId)) as 
+          | Doc<"files">
+          | undefined
+        if (!file) break;
+
+        path.unshift({_id: file._id, name: file.name })
+        currentId = file.parentId;
+      }
+      return path;
   },
 });
 
@@ -81,6 +111,47 @@ export const getFolderContents = query({
       if (a.type === "file" && b.type === "folder") return 1;
       return a.name.localeCompare(b.name);
     });
+  },
+});
+
+/* =======================
+   Get File Path (FIXED)
+======================= */
+export const getFilePath = query({
+  args: { id: v.id("files") },
+
+  handler: async (ctx, args) => {
+    const identity = await verifyAuth(ctx);
+
+    const file = await ctx.db.get(args.id);
+    if (!file) throw new Error("File not found");
+
+    const project = await ctx.db.get(file.projectId);
+    if (!project) throw new Error("Project not found");
+
+    if (project.ownerId !== identity.subject)
+      throw new Error("Unauthorized");
+
+    const path: { _id: Id<"files">; name: string }[] = [];
+
+    let currentId: Id<"files"> | undefined = args.id;
+
+    while (currentId) {
+      const current = await ctx.db.get(currentId) as
+        | (typeof file)
+        | null;
+
+      if (!current) break;
+
+      path.unshift({
+        _id: current._id,
+        name: current.name,
+      });
+
+      currentId = current.parentId ?? undefined;
+    }
+
+    return path;
   },
 });
 
@@ -160,15 +231,93 @@ export const createFolder = mutation({
 
     return await ctx.db.insert("files", {
       projectId: args.projectId,
-      parentId: args.parentId,  
+      parentId: args.parentId,
       name: args.name,
       type: "folder",
       updateAt: Date.now(),
     });
-    await ctx.db.patch("projects", args.projectId,{
-        updateAt: Date.now(),
+  },
+});
+
+/* =======================
+   Update File Content
+======================= */
+export const updateFile = mutation({
+  args: {
+    id: v.id("files"),
+    content: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const identity = await verifyAuth(ctx);
+
+    const file = await ctx.db.get(args.id);
+    if (!file) throw new Error("File not found");
+
+    if (file.type !== "file")
+      throw new Error("Cannot update folder content");
+
+    const project = await ctx.db.get(file.projectId);
+    if (!project) throw new Error("Project not found");
+
+    if (project.ownerId !== identity.subject)
+      throw new Error("Unauthorized");
+
+    await ctx.db.patch(args.id, {
+      content: args.content,
+      updateAt: Date.now(),
     });
-      
+
+    return args.id;
+  },
+});
+
+/* =======================
+   Delete File / Folder (FIXED)
+======================= */
+export const deleteFile = mutation({
+  args: { id: v.id("files") },
+
+  handler: async (ctx, args) => {
+    const identity = await verifyAuth(ctx);
+
+    const file = await ctx.db.get(args.id);
+    if (!file) throw new Error("File not found");
+
+    const project = await ctx.db.get(file.projectId);
+    if (!project) throw new Error("Project not found");
+
+    if (project.ownerId !== identity.subject)
+      throw new Error("Unauthorized");
+
+    const deleteRecursive = async (fileId: Id<"files">) => {
+      const item = await ctx.db.get(fileId);
+      if (!item) return;
+
+      if (item.type === "folder") {
+        const children = await ctx.db
+          .query("files")
+          .withIndex("byProjectParent", (q) =>
+            q.eq("projectId", item.projectId)
+             .eq("parentId", fileId)
+          )
+          .collect();
+
+        for (const child of children) {
+          await deleteRecursive(child._id);
+        }
+      }
+
+      if (item.storageId) {
+        await ctx.storage.delete(item.storageId);
+      }
+
+      await ctx.db.delete(fileId); // 🔥 THIS WAS MISSING
+    };
+
+    await deleteRecursive(args.id);
+
+    return args.id;
   },
 });
 
@@ -178,7 +327,7 @@ export const createFolder = mutation({
 export const renameFile = mutation({
   args: {
     id: v.id("files"),
-    newName: v.string(),
+    name: v.string(),
   },
 
   handler: async (ctx, args) => {
@@ -193,6 +342,7 @@ export const renameFile = mutation({
     if (project.ownerId !== identity.subject)
       throw new Error("Unauthorized");
 
+      // Check if a file/folder with the same name already exists in the same parent
     const siblings = await ctx.db
       .query("files")
       .withIndex("byProjectParent", (q) =>
@@ -201,102 +351,15 @@ export const renameFile = mutation({
       )
       .collect();
 
-    if (siblings.some(f => f.name === args.newName && f._id !== file._id)) {
+    if (siblings.some(f => f.name === args.name && f._id !== args.id)) {
       throw new Error("A file or folder with this name already exists");
     }
 
     await ctx.db.patch(args.id, {
-      name: args.newName,
+      name: args.name,
       updateAt: Date.now(),
     });
 
-    await ctx.db.patch("projects", file.projectId,{
-        updateAt: Date.now(),
-    });
-      
     return args.id;
   },
-});
-
-/* =======================
-   Delete File / Folder (Recursive + Storage Cleanup)
-======================= */
-export const deleteFile = mutation({
-  args: {
-    id: v.id("files"),
-  },
-
-  handler: async (ctx, args) => {
-        const identity = await verifyAuth(ctx);
-
-        const file = await ctx.db.get(args.id);
-        if (!file) throw new Error("File not found");
-
-        const project = await ctx.db.get(file.projectId);
-        if (!project) throw new Error("Project not found");
-
-        if (project.ownerId !== identity.subject)
-        throw new Error("Unauthorized");
-
-        const deleteRecursive = async (fileId: Id<"files">) => {
-            const item = await ctx.db.get(fileId);
-            if (!item) return;
-
-            if (item.type === "folder") {
-                const children = await ctx.db
-                .query("files")
-                .withIndex("byProjectParent", (q) =>
-                    q.eq("projectId", item.projectId)
-                    .eq("parentId", fileId)
-                )
-                .collect();
-
-                for (const child of children) {
-                await deleteRecursive(child._id);
-                }
-            }
-
-            if (item.storageId) {
-                await ctx.storage.delete(item.storageId);
-            }
-
-        };
-            await deleteRecursive(args.id);
-                 await ctx.db.patch("projects", file.projectId,{
-            updateAt: Date.now(),
-        });
-      
-            return args.id;
-  },
-});
-
-export const updateFile = mutation({
-    args: {
-    id: v.id("files"),
-    content: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const identity = await verifyAuth(ctx);
-
-        const file = await ctx.db.get(args.id);
-        if (!file) throw new Error("File not found");
-
-        const project = await ctx.db.get(file.projectId);
-        if (!project) throw new Error("Project not found");
-
-        if (project.ownerId !== identity.subject)
-        throw new Error("Unauthorized");
-        
-        const now = Date.now();
-
-        await ctx.db.patch("files", args.id, {
-            content: args.content,
-            updateAt: now,
-        });
-
-        await ctx.db.patch("projects", file.projectId,{
-            updateAt: Date.now(),
-        });
-        
-    },
 });

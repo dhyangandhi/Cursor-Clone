@@ -1,18 +1,21 @@
-"use client";
-
-import { ChevronRightIcon, FileIcon, FolderIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
+import { FileIcon, FolderIcon } from "@react-symbols/icons/utils";
 import { cn } from "@/lib/utils";
+
 import {
   useCreateFile,
   useCreateFolder,
   useFolderContents,
-  useRenameFile,
   useDeleteFile,
-} from "../hooks/use-files";
+  useRenameFile,
+} from "@/features/projects/components/hooks/use-files";
+
+import { useState } from "react";
 import { LoadingRow } from "./Loading-Row";
 import { CreateInput } from "./create-input";
 import { Doc, Id } from "@convex/_generated/dataModel";
-import { useState } from "react";
+import { TreeItemWrapper } from "./tree-item-wapper";
+import { useEditor } from "@/features/editor/hooks/use-editor";
 
 export const Tree = ({
   item,
@@ -31,55 +34,107 @@ export const Tree = ({
   const deleteFile = useDeleteFile();
   const createFile = useCreateFile();
   const createFolder = useCreateFolder();
-
+  const { openFile, closeTab, activeTab } = useEditor(projectId);
   const folderContents = useFolderContents({
     projectId,
     parentId: item._id,
     enabled: item.type === "folder" && isOpen,
   });
 
-  const paddingLeft = level * 16;
-
-  /* =====================
+  /* ============================
      FILE NODE
-  ====================== */
+  ============================ */
   if (item.type === "file") {
+    const fileName = item.name;
+    const isActive = activeTab === item._id;
     return (
-      <div
-        className="flex items-center gap-1 h-6 cursor-pointer hover:bg-accent/40"
-        style={{ paddingLeft }}
+      <TreeItemWrapper
+        item={item}
+        level={level}
+        isActive={isActive}
+        onClick={() => openFile( item._id, {pinned: false })}
+        onDoubleClick={() => openFile(item._id, {pinned: true })}
+        onRename={() => setIsRenaming(true)}
+        onDelete={() => deleteFile({ id: item._id })}
       >
-        <div className="size-4" />
-        <FileIcon className="size-4 text-muted-foreground" />
-        <span className="text-sm">{item.name}</span>
-      </div>
+        {isRenaming ? (
+          <CreateInput
+            type="file"
+            level={level}
+            onSubmit={(name) => {
+              renameFile({ id: item._id, name });
+              setIsRenaming(false);
+            }}
+            onCancel={() => setIsRenaming(false)}
+          />
+        ) : (
+          <>
+            <FileIcon
+              fileName={item.name}
+              autoAssign
+              className="size-4"
+            />
+            <span className="truncate text-sm">{item.name}</span>
+          </>
+        )}
+      </TreeItemWrapper>
     );
   }
 
-  /* =====================
+  /* ============================
      FOLDER NODE
-  ====================== */
+  ============================ */
   return (
     <div>
-      {/* Folder Row */}
-      <div
-        className="flex items-center gap-1 h-6 cursor-pointer hover:bg-accent/40"
-        style={{ paddingLeft }}
-        onClick={() => setIsOpen((v) => !v)}
+      <TreeItemWrapper
+        item={item}
+        level={level}
+        isActive={false}
+        onClick={() => setIsOpen((prev) => !prev)}
+        onDoubleClick={() => setIsOpen(true)}
+        onRename={() => setIsRenaming(true)}
+        onDelete={() => deleteFile({ id: item._id })}
+        onCreateFile={() => {
+          closeTab(item._id);
+          setIsOpen(true);
+          setCreating("file");
+        }}
+        onCreateFolder={() => {
+          setIsOpen(true);
+          setCreating("folder");
+        }}
       >
         <ChevronRightIcon
           className={cn(
-            "size-4 text-muted-foreground transition-transform",
+            "size-4 transition-transform",
             isOpen && "rotate-90"
           )}
         />
-        <FolderIcon className="size-4 text-muted-foreground" />
-        <span className="text-sm">{item.name}</span>
-      </div>
 
-      {/* Folder Children */}
+        <FolderIcon
+          folderName={item.name}
+          autoReverse
+          className="size-4"
+        />
+
+        {isRenaming ? (
+          <CreateInput
+            type="folder"
+            level={level}
+            onSubmit={(name) => {
+              renameFile({ id: item._id, name });
+              setIsRenaming(false);
+            }}
+            onCancel={() => setIsRenaming(false)}
+          />
+        ) : (
+          <span className="truncate text-sm">{item.name}</span>
+        )}
+      </TreeItemWrapper>
+
       {isOpen && (
         <div>
+          {/* CREATE INPUT */}
           {creating && (
             <CreateInput
               type={creating}
@@ -105,10 +160,12 @@ export const Tree = ({
             />
           )}
 
+          {/* LOADING */}
           {folderContents === undefined && (
             <LoadingRow level={level + 1} />
           )}
 
+          {/* CHILDREN */}
           {folderContents?.map((child) => (
             <Tree
               key={child._id}
