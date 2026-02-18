@@ -96,9 +96,10 @@ export const TreeItemWrapper = ({
           className="text-red-500 focus:text-red-500"
         >
           Delete Permanently
-          <ContextMenuShortcut>⌘⌫</ContextMenuShortcut>
+          <ContextMenuShortcut>Shit + K</ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );
 };
+   

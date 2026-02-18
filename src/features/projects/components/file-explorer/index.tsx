@@ -68,7 +68,7 @@ export const FileExplore = ({
         {/* Root Header */}
         <div
           role="button"
-          onClick={() => setIsOpen((v) => !v)}
+          onClick={() => setIsOpen((value) => !value)}
           className="group flex items-center w-full h-6 px-2 bg-accent font-semibold cursor-pointer"
         >
           <ChevronRightIcon
@@ -136,7 +136,7 @@ export const FileExplore = ({
 
             {rootFiles?.map((item) => (
               <Tree
-                key={item._id}
+                key={item._id}   // ✅ FIXED
                 item={item}
                 level={0}
                 projectId={projectId}

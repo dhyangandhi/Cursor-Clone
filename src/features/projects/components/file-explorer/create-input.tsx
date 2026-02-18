@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronRightIcon, FileIcon, FolderIcon } from "lucide-react";
 import { useState } from "react";
+import { ChevronRightIcon } from "lucide-react"; // ✅ FIXED IMPORT
+import { getItemPadding } from "./constants";
 
 export const CreateInput = ({
   type,
@@ -15,10 +16,10 @@ export const CreateInput = ({
   onCancel: () => void;
 }) => {
   const [value, setValue] = useState("");
+  const isFolder = type === "folder";
 
   const handleSubmit = () => {
     const trimmed = value.trim();
-
     if (!trimmed) {
       onCancel();
       return;
@@ -30,32 +31,25 @@ export const CreateInput = ({
   return (
     <div
       className="w-full flex items-center gap-1 h-[22px] bg-accent/30"
-      style={{ paddingLeft: `${level * 16}px` }}
+      style={{ paddingLeft: getItemPadding(level, !isFolder) }}
     >
-      {/* Expand icon placeholder for alignment */}
-      {type === "folder" ? (
+      {isFolder ? (
         <ChevronRightIcon className="size-4 text-muted-foreground" />
       ) : (
         <div className="size-4" />
       )}
-
-      {type === "folder" ? (
-        <FolderIcon className="size-4 text-muted-foreground" />
-      ) : (
-        <FileIcon className="size-4 text-muted-foreground" />
-      )}
-
       <input
         autoFocus
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onBlur={handleSubmit}
         onKeyDown={(e) => {
           if (e.key === "Enter") handleSubmit();
-          if (e.key === "Escape") onCancel();
+        }}
+        onBlur={() => {
+          if (!value.trim()) onCancel();
         }}
         className="bg-transparent outline-none text-sm w-full"
-        placeholder={type === "folder" ? "New folder" : "New file"}
+        placeholder={isFolder ? "New folder" : "New file"}
       />
     </div>
   );
