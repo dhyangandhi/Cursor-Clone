@@ -1,7 +1,8 @@
 import { inngest } from "./client";
-import { google } from "@ai-sdk/google";
 import { firecrawl } from "@/lib/firecrawl";
 import { generateText } from "ai";
+// import { anthropic } from "@ai-sdk/anthropic";
+import { google } from "@ai-sdk/google";
 const URL_REGEX = /https?:\/\/[^\s]+/g;
 
 export const demoGenerate = inngest.createFunction(
@@ -15,6 +16,9 @@ export const demoGenerate = inngest.createFunction(
     }) as string[];
     
     const scrapedContent = await step.run("scrape-urls", async () => {
+      if (!firecrawl) {
+        throw new Error("Firecrawl is not configured. Please set FIRECRAWL_API_KEY.");
+      }
       const results = await Promise.all(
         urls.map(async (urls) => {
           const results = await firecrawl.scrape(
@@ -34,7 +38,7 @@ export const demoGenerate = inngest.createFunction(
 
     await step.run("generate-text", async () => {
       return await generateText({
-        model: google('gemini-2.5-flash'),
+        model: google("gemini-2.5-flash"),
         prompt: finalPrompt,
         experimental_telemetry: {
           isEnabled: true,

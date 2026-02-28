@@ -5,7 +5,7 @@ export default defineSchema({
   projects: defineTable({
     name: v.string(),
     ownerId: v.string(),
-    updateAt: v.number(),
+    updatedAt: v.number(),
     importStatus: v.optional(
       v.union(
         v.literal("importing"),
@@ -30,10 +30,33 @@ export default defineSchema({
     name: v.string(),
     type: v.union(v.literal("file"), v.literal("folder")),
     content: v.optional(v.string()),
-    storageId: v.optional(v.id("_storage")), // fixed casing
-    updateAt: v.number(),
+    storageId: v.optional(v.id("_storage")),
+    updatedAt: v.number(),
   })
     .index("byProject", ["projectId"])
     .index("byParent", ["parentId"])
     .index("byProjectParent", ["projectId", "parentId"]),
+
+  conversations: defineTable({
+    projectId: v.id("projects"),
+    title: v.string(),
+    updatedAt: v.number(),
+  }).index("byProject", ["projectId"]),
+
+  messages: defineTable({
+    conversationId: v.id("conversations"),
+    projectId: v.id("projects"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    status: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("in-progress"),
+        v.literal("completed")
+      )
+    ),
+    updatedAt: v.number(),
+  })
+    .index("byConversation", ["conversationId"])
+    .index("byProjectStatus", ["projectId", "status"]),
 });

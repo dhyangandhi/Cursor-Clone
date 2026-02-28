@@ -16,7 +16,7 @@ export const addProject = mutation({
     const projectId = await ctx.db.insert("projects", {
       name: args.name,
       ownerId: identity.subject,
-      updateAt: Date.now(),
+      updatedAt: Date.now(),
     });
 
     return projectId;
@@ -89,7 +89,7 @@ export const rename = mutation({
 
     await ctx.db.patch("projects", args.id, {
       name: args.name,
-      updateAt: Date.now(),
+      updatedAt: Date.now(),
     });
   },
 });

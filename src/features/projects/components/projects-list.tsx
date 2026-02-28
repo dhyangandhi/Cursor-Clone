@@ -56,7 +56,7 @@ const ContinueCard = ({
                             <ArrowRightIcon  className="size-4 text-muted-foreground group-hover:translate-x-0.5 transition-transfrom" />
                         </div>
                         <span className="text-xs text-muted-foreground">
-                            {formatTimestamp(data.updateAt)}
+                            {formatTimestamp(data.updatedAt)}
                         </span>
                     </div>
                 </Link>
@@ -78,7 +78,7 @@ const ProjectItem = ({
                 <span className="tuncate">{data.name}</span>
             </div>
             <span className="text-xs text-muted-foreground group-nover:text-foregrund/60 transition-colors">
-                {formatTimestamp(data.updateAt)}
+                {formatTimestamp(data.updatedAt)}
             </span>
             
         </Link>
@@ -90,6 +90,7 @@ export const ProjectsList = ({
 }: ProjectsListProps) => {
     const projects = useProjectsPartial(6);
 
+    
     if(projects === undefined) {
         return <Spinner className="size-4 text-ring" />
     }

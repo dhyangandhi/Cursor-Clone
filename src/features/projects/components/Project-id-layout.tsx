@@ -5,7 +5,7 @@ import { Navbar } from "./Navbar";
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
 import { TooltipProvider } from "@/components/ui/tooltip"; // ← ADD THIS
-
+import { CoversationSidebar } from "@/features/components/coversation-sidebar";
 const MIN_SIDEBAR_WIDTH = 200;
 const MAX_SIDEBAR_WIDTH = 400;
 const DEFAULT_CONVERSATION_SIDEBAR_WIDTH = 400;
@@ -37,7 +37,7 @@ export const ProjectIdLayout = ({
               maxSize={MAX_SIDEBAR_WIDTH}
               preferredSize={DEFAULT_CONVERSATION_SIDEBAR_WIDTH}
             >
-              <div>Conversation Sidebar</div>
+              <CoversationSidebar projectId={projectId} />
             </Allotment.Pane>
 
             <Allotment.Pane>
