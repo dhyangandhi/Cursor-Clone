@@ -1,53 +1,50 @@
 import { inngest } from "./client";
 import { firecrawl } from "@/lib/firecrawl";
 import { generateText } from "ai";
-// import { anthropic } from "@ai-sdk/anthropic";
-import { google } from "@ai-sdk/google";
+import { ollama } from "ollama-ai-provider-v2";
+
 const URL_REGEX = /https?:\/\/[^\s]+/g;
 
 export const demoGenerate = inngest.createFunction(
   { id: "demo-generate" },
   { event: "demo/generate" },
   async ({ event, step }) => {
-    const { prompt } = event.data as { prompt: string; };
+    const { prompt } = event.data as { prompt: string };
 
     const urls = await step.run("extract-urls", async () => {
       return prompt.match(URL_REGEX) ?? [];
     }) as string[];
-    
+
     const scrapedContent = await step.run("scrape-urls", async () => {
       if (!firecrawl) {
-        throw new Error("Firecrawl is not configured. Please set FIRECRAWL_API_KEY.");
+        throw new Error("Firecrawl is not configured.");
       }
+
       const results = await Promise.all(
-        urls.map(async (urls) => {
-          const results = await firecrawl.scrape(
-            urls,
-            { formats: ["markdown"] },
-          );
-          return results.markdown ?? null;
+        urls.map(async (url) => {
+          const result = await firecrawl!.scrape(url, {
+            formats: ["markdown"],
+          });
+          return result.markdown ?? null;
         })
       );
+
       return results.filter(Boolean).join("\n\n");
     });
 
     const finalPrompt = scrapedContent
-      ? `Context:\n${scrapedContent}\n\nQusetion:${prompt}`
+      ? `Context:\n${scrapedContent}\n\nQuestion:\n${prompt}`
       : prompt;
 
-
-    await step.run("generate-text", async () => {
+    const response = await step.run("generate-text", async () => {
       return await generateText({
-        model: google("gemini-2.5-flash"),
+        model: ollama("qwen2.5-coder:7b"),
         prompt: finalPrompt,
-        experimental_telemetry: {
-          isEnabled: true,
-          recordInputs: true,
-          recordOutputs: true,
-        },
       });
-    })
-  },
+    });
+
+    return response;
+  }
 );
 
 export const demoError = inngest.createFunction(
@@ -55,7 +52,7 @@ export const demoError = inngest.createFunction(
   { event: "demo/error" },
   async ({ step }) => {
     await step.run("fail", async () => {
-      throw new Error("Inngest error: Somrthing went wrong on the server!")
+      throw new Error("Inngest error: Something went wrong on the server!");
     });
   }
-)
+);

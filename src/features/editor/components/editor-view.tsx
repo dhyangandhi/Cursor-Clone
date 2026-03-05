@@ -1,3 +1,5 @@
+"use client";
+
 import { Id } from "@convex/_generated/dataModel";
 import { TopNavigation } from "./top-Navigation";
 import { useEditor } from "../hooks/use-editor";
@@ -43,7 +45,7 @@ export const EditorView = ({
 
     timeoutRef.current = setTimeout(() => {
       updateFile({
-        id: activeFile._id,
+        fileId: activeFile._id, // ✅ FIXED
         content: newContent,
       });
     }, DEBOUNCE_MS);
@@ -92,4 +94,3 @@ export const EditorView = ({
     </div>
   );
 };
-  

@@ -14,7 +14,7 @@ const requestSchema = z.object({
 export async function POST(request: Request) {
   try {
     const { userId } = await auth();
-    const internalKey = process.env.CONVEX_INTERNAL_KEY;  
+    const internalKey = process.env.CONVEX_INTERNAL_KEY;
 
     if (!internalKey) {
       return new NextResponse("Internal Server Error", { status: 500 });
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { conversationId, message } = requestSchema.parse(body);
 
+    // 🔹 Validate conversation
     const conversation = await convex.query(
       api.system.getConversationById,
       {
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
 
     const projectId = conversation.projectId;
 
+    // 🔹 Save user message
     await convex.mutation(api.system.createMessage, {
       internalKey,
       conversationId: conversationId as Id<"conversations">,
@@ -49,6 +51,7 @@ export async function POST(request: Request) {
       content: message,
     });
 
+    // 🔹 Create assistant placeholder
     const assistantMessageId = await convex.mutation(
       api.system.createMessage,
       {
@@ -56,20 +59,24 @@ export async function POST(request: Request) {
         conversationId: conversationId as Id<"conversations">,
         projectId,
         role: "assistant",
-        content: "Generating response...",
+        content: "AI processing...",
         status: "in-progress",
       }
     );
 
-    const event = await inngest.send({
+    // 🔥 SEND EVENT TO INNGEST (THIS TRIGGERS processMessages)
+    await inngest.send({
       name: "message/sent",
       data: {
         messageId: assistantMessageId,
+        conversationId: conversationId as Id<"conversations">,
+        projectId,
+        message,
       },
-    })
+    });
+
     return NextResponse.json({
       success: true,
-      eventId: event.ids[0],
       messageId: assistantMessageId,
     });
 

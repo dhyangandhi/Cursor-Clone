@@ -1,0 +1,1 @@
+export const DEFAULT_COVERSATION_TITLE = "New Conversation";

@@ -52,11 +52,13 @@ export default defineSchema({
       v.union(
         v.literal("pending"),
         v.literal("in-progress"),
-        v.literal("completed")
+        v.literal("completed"),
+        v.literal("cancelled")
       )
     ),
     updatedAt: v.number(),
   })
     .index("byConversation", ["conversationId"])
-    .index("byProjectStatus", ["projectId", "status"]),
+    .index("by_Project_Status", ["projectId", "status"]),
 });
+

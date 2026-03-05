@@ -59,7 +59,6 @@ export const FileBreadcrumbs = ({
                     </BreadcrumbLink>
                   )}
                 </BreadcrumbItem>
-
                 {!isLast && <BreadcrumbSeparator>/</BreadcrumbSeparator>}
               </React.Fragment>
             );
