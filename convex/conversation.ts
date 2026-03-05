@@ -3,7 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { verifyAuth } from "./auth";
 
 /* =========================
-   CREATE CONVERSATION
+   CREATE CONVERSATION (USER)
 ========================= */
 
 export const create = mutation({
@@ -15,26 +15,20 @@ export const create = mutation({
     const identity = await verifyAuth(ctx);
 
     const project = await ctx.db.get(args.projectId);
-    if (!project) {
-      throw new Error("Project not found");
-    }
-
-    if (project.ownerId !== identity.subject) {
+    if (!project) throw new Error("Project not found");
+    if (project.ownerId !== identity.subject)
       throw new Error("Unauthorized");
-    }
 
-    const conversationId = await ctx.db.insert("conversations", {
+    return ctx.db.insert("conversations", {
       projectId: args.projectId,
       title: args.title,
       updatedAt: Date.now(),
     });
-
-    return conversationId;
   },
 });
 
 /* =========================
-   GET CONVERSATION BY ID
+   GET CONVERSATION BY ID (USER)
 ========================= */
 
 export const getById = query({
@@ -45,21 +39,34 @@ export const getById = query({
     const identity = await verifyAuth(ctx);
 
     const conversation = await ctx.db.get(args.id);
-    if (!conversation) {
-      throw new Error("Conversation not found");
-    }
+    if (!conversation) throw new Error("Conversation not found");
 
     const project = await ctx.db.get(conversation.projectId);
-    if (!project || project.ownerId !== identity.subject) {
+    if (!project || project.ownerId !== identity.subject)
       throw new Error("Unauthorized");
-    }
 
     return conversation;
   },
 });
 
 /* =========================
-   GET CONVERSATIONS BY PROJECT
+   INTERNAL: GET CONVERSATION (FOR INNGEST)
+========================= */
+
+export const getByIdInternal = query({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) throw new Error("Conversation not found");
+
+    return conversation;
+  },
+});
+
+/* =========================
+   GET CONVERSATIONS BY PROJECT (USER)
 ========================= */
 
 export const getByProject = query({
@@ -70,17 +77,12 @@ export const getByProject = query({
     const identity = await verifyAuth(ctx);
 
     const project = await ctx.db.get(args.projectId);
-    if (!project) {
-      throw new Error("Project not found");
-    }
-
-    if (project.ownerId !== identity.subject) {
+    if (!project) throw new Error("Project not found");
+    if (project.ownerId !== identity.subject)
       throw new Error("Unauthorized");
-    }
 
-    return await ctx.db
+    return ctx.db
       .query("conversations")
-      // ✅ FIXED: matches schema index name exactly
       .withIndex("byProject", (q) =>
         q.eq("projectId", args.projectId)
       )
@@ -90,7 +92,7 @@ export const getByProject = query({
 });
 
 /* =========================
-   GET MESSAGES
+   GET MESSAGES (USER)
 ========================= */
 
 export const getMessages = query({
@@ -101,18 +103,33 @@ export const getMessages = query({
     const identity = await verifyAuth(ctx);
 
     const conversation = await ctx.db.get(args.conversationId);
-    if (!conversation) {
-      throw new Error("Conversation not found");
-    }
+    if (!conversation) throw new Error("Conversation not found");
 
     const project = await ctx.db.get(conversation.projectId);
-    if (!project || project.ownerId !== identity.subject) {
+    if (!project || project.ownerId !== identity.subject)
       throw new Error("Unauthorized");
-    }
 
-    return await ctx.db
+    return ctx.db
       .query("messages")
-      // ✅ FIXED: matches schema index name exactly
+      .withIndex("byConversation", (q) =>
+        q.eq("conversationId", args.conversationId)
+      )
+      .order("desc")
+      .collect();
+  },
+});
+
+/* =========================
+   INTERNAL: GET MESSAGES (FOR INNGEST)
+========================= */
+
+export const getMessagesInternal = query({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query("messages")
       .withIndex("byConversation", (q) =>
         q.eq("conversationId", args.conversationId)
       )

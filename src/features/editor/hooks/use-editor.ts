@@ -21,7 +21,6 @@ export const useEditor = (projectId: Id<"projects">) => {
     },
     [store, projectId]
   );
-
   const closeAllTabs = useCallback(() => {
     store.closeAllTabs(projectId);
   }, [store, projectId])

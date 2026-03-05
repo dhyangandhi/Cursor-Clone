@@ -1,52 +1,176 @@
-import { mutation } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { defineSchema, defineTable } from "convex/server"; // Note: You don't actually need this line in this file, but I kept it as requested!
+import { Doc } from "./_generated/dataModel";
 
-// Mutation to create a new file or folder
+/* ===========================
+   GET SINGLE FILE
+=========================== */
+
+export const getFile = query({
+  args: { fileId: v.id("files") },
+  handler: async (ctx, args) => {
+    return ctx.db.get(args.fileId);
+  },
+});
+
+/* ===========================
+   GET FOLDER CONTENTS
+=========================== */
+
+export const getFolderContents = query({
+  args: {
+    projectId: v.id("projects"),
+    parentId: v.optional(v.id("files")),
+  },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query("files")
+      .withIndex("byProjectParent", (q) =>
+        q.eq("projectId", args.projectId)
+         .eq("parentId", args.parentId ?? undefined)
+      )
+      .collect();
+  },
+});
+
+/* ===========================
+   CREATE FILE
+=========================== */
+
 export const createFile = mutation({
-  // The arguments must match what you want to pass from the frontend
   args: {
     projectId: v.id("projects"),
     parentId: v.optional(v.id("files")),
     name: v.string(),
-    type: v.union(v.literal("file"), v.literal("folder")),
     content: v.optional(v.string()),
-    storageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    // Insert the new file into the database
-    const newFileId = await ctx.db.insert("files", {
+    const existing = await ctx.db
+      .query("files")
+      .withIndex("byProjectParent", (q) =>
+        q.eq("projectId", args.projectId)
+         .eq("parentId", args.parentId ?? undefined)
+      )
+      .collect();
+
+    if (existing.some((f) => f.name === args.name)) {
+      throw new Error("File already exists in this folder");
+    }
+
+    const fileId = await ctx.db.insert("files", {
       projectId: args.projectId,
-      parentId: args.parentId,
+      parentId: args.parentId ?? undefined,
       name: args.name,
-      type: args.type,
-      content: args.content,
-      storageId: args.storageId,
-      // --- THE FIX IS HERE ---
-      // Ensure it is spelled 'updatedAt', NOT 'updateAt'
-      updatedAt: Date.now(), 
+      type: "file",
+      content: args.content ?? "",
+      updatedAt: Date.now(),
     });
 
-    return newFileId;
+    return fileId;
   },
 });
 
-// Mutation to update an existing file
+/* ===========================
+   CREATE FOLDER
+=========================== */
+
+export const createFolder = mutation({
+  args: {
+    projectId: v.id("projects"),
+    parentId: v.optional(v.id("files")),
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("files")
+      .withIndex("byProjectParent", (q) =>
+        q.eq("projectId", args.projectId)
+         .eq("parentId", args.parentId ?? undefined)
+      )
+      .collect();
+
+    if (existing.some((f) => f.name === args.name)) {
+      throw new Error("Folder already exists in this location");
+    }
+
+    const folderId = await ctx.db.insert("files", {
+      projectId: args.projectId,
+      parentId: args.parentId ?? undefined,
+      name: args.name,
+      type: "folder",
+      updatedAt: Date.now(),
+    });
+
+    return folderId;
+  },
+});
+
+/* ===========================
+   UPDATE FILE
+=========================== */
+
 export const updateFile = mutation({
   args: {
     fileId: v.id("files"),
-    name: v.optional(v.string()),
     content: v.optional(v.string()),
+    name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { fileId, ...updates } = args;
 
-    // Patch the file with the new data
     await ctx.db.patch(fileId, {
       ...updates,
-      // --- THE FIX IS HERE ---
-      // Again, ensure it is exactly 'updatedAt' when patching
       updatedAt: Date.now(),
     });
+  },
+});
+
+/* ===========================
+   RENAME FILE
+=========================== */
+
+export const renameFile = mutation({
+  args: {
+    fileId: v.id("files"),
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.fileId, {
+      name: args.name,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/* ===========================
+   DELETE FILE
+=========================== */
+
+export const deleteFile = mutation({
+  args: {
+    fileId: v.id("files"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.fileId);
+  },
+});
+
+/* ===========================
+   GET FILE PATH
+=========================== */
+
+export const getFilePath = query({
+  args: { fileId: v.id("files") },
+  handler: async (ctx, args) => {
+    const path: Doc<"files">[] = [];
+    let current = await ctx.db.get(args.fileId);
+
+    while (current) {
+      path.unshift(current);
+      if (!current.parentId) break;
+      current = await ctx.db.get(current.parentId);
+    }
+
+    return path;
   },
 });

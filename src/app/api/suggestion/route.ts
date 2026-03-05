@@ -13,7 +13,7 @@ interface OllamaResponse {
 function callOllama(prompt: string): Promise<OllamaResponse> {
   return new Promise((resolve, reject) => {
     const postData = JSON.stringify({
-      model: "qwen2.5-coder:3b",
+      model: "qwen2.5-coder:7b",
       messages: [
         {
           role: "system",
