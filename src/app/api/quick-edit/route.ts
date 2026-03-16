@@ -1,9 +1,13 @@
-import { google } from "@ai-sdk/google";
+import { createOllama } from "ai-sdk-ollama";
 import { generateText, Output } from "ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { firecrawl } from "@/lib/firecrawl";
 import { auth } from "@clerk/nextjs/server";
+
+const ollama = createOllama({
+  baseURL: process.env.OLLAMA_BASE_URL || "http://192.168.0.110:11434",
+});
 
 const quickEditSchema = z.object({
   editedCode: z
@@ -41,7 +45,6 @@ If the instruction is unclear or cannot be applied, return the original code unc
 
 export async function POST(request: Request) {
   try {
-    // ✅ Correct: auth() must be awaited in Route Handlers
     const { userId } = await auth();
 
     if (!userId) {
@@ -64,11 +67,11 @@ export async function POST(request: Request) {
     const urls: string[] = instruction?.match(URL_REGEX) || [];
     let documentationContext = "";
 
-    if (urls.length > 0) {
+    if (urls.length > 0 && firecrawl) {
       const scrapedResults = await Promise.all(
         urls.map(async (url) => {
           try {
-            const result = await firecrawl.scrape(url, {
+const result = await firecrawl!.scrape(url, {
               formats: ["markdown"],
             });
 
@@ -99,7 +102,7 @@ export async function POST(request: Request) {
       .replace("{documentation}", documentationContext);
 
     const { output } = await generateText({
-      model: google("gemini-2.5-flash"),
+      model: ollama(process.env.OLLAMA_MODEL || "deepseek-coder"),
       output: Output.object({ schema: quickEditSchema }),
       prompt,
     });
