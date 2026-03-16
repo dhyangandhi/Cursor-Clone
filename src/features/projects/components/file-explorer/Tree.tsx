@@ -55,14 +55,14 @@ export const Tree = ({
         onClick={() => openFile( item._id, {pinned: false })}
         onDoubleClick={() => openFile(item._id, {pinned: true })}
         onRename={() => setIsRenaming(true)}
-        onDelete={() => deleteFile({ id: item._id })}
+        onDelete={() => deleteFile({ fileId: item._id })}
       >
         {isRenaming ? (
           <CreateInput
             type="file"
             level={level}
             onSubmit={(name) => {
-              renameFile({ id: item._id, name });
+              renameFile({ fileId: item._id, name });
               setIsRenaming(false);
             }}
             onCancel={() => setIsRenaming(false)}
@@ -93,7 +93,7 @@ export const Tree = ({
         onClick={() => setIsOpen((prev) => !prev)}
         onDoubleClick={() => setIsOpen(true)}
         onRename={() => setIsRenaming(true)}
-        onDelete={() => deleteFile({ id: item._id })}
+        onDelete={() => deleteFile({ fileId: item._id })}
         onCreateFile={() => {
           closeTab(item._id);
           setIsOpen(true);
@@ -122,7 +122,7 @@ export const Tree = ({
             type="folder"
             level={level}
             onSubmit={(name) => {
-              renameFile({ id: item._id, name });
+              renameFile({ fileId: item._id, name });
               setIsRenaming(false);
             }}
             onCancel={() => setIsRenaming(false)}
