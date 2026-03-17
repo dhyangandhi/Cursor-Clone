@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/tooltip";
 import { CloudCheckIcon, LoaderIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { unknown } from "zod/v4";
 const font = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -135,8 +134,8 @@ export const Navbar = ({
                     </TooltipTrigger>
                     <TooltipContent>
                         Save{" "}
-                        {project?.updateAt ? formatDistanceToNow(
-                            project.updateAt,
+                        {project?.updatedAt ? formatDistanceToNow(
+                            project.updatedAt,
                             { addSuffix: true, }
                         ) : "unknown"}
                     </TooltipContent>
