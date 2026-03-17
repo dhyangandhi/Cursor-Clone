@@ -6,7 +6,7 @@ import { firecrawl } from "@/lib/firecrawl";
 import { auth } from "@clerk/nextjs/server";
 
 const ollama = createOllama({
-  baseURL: process.env.OLLAMA_BASE_URL || "http://192.168.0.110:11434",
+  baseURL: process.env.OLLAMA_BASE_URL || "https://ollama.tailc7ee10.ts.net/",
 });
 
 const quickEditSchema = z.object({
