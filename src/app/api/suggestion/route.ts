@@ -33,7 +33,7 @@ function callOllama(prompt: string): Promise<OllamaResponse> {
     });
 
     const options = {
-      hostname: "localhost",
+      hostname: "https://ollama.tailc7ee10.ts.net/",
       port: 11434,
       path: "/api/chat",
       method: "POST",
