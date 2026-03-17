@@ -26,7 +26,7 @@ export const useCreateProject = () => {
         _creationTime: now,
         name: args.name,
         ownerId: "anonymous",
-        updateAt: now,
+        updatedAt: now,
       };
 
       localStore.setQuery(api.projects.get, {}, [
