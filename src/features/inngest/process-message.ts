@@ -80,7 +80,7 @@ export const processMessages = inngest.createFunction(
 
       model: openai({
         model: "qwen2.5-coder:7b",
-        baseUrl: "http://localhost:11434/v1",
+        baseUrl: "https://ollama.tailc7ee10.ts.net/v1",
         apiKey: "ollama",
       }),
 
